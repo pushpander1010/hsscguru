@@ -1,12 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* optional brand vars */
 :root {
-  --brand: 34 197 94;      /* emerald-500 */
-  --brand-600: 22 163 74;  /* emerald-600 */
+  --brand: 34 197 94;
+  --brand-600: 22 163 74;
 }
-
 a { text-underline-offset: 2px; }
 html, body { height: 100%; }
