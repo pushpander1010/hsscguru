@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Question = {
@@ -14,13 +14,8 @@ type Question = {
   source: string | null;
 };
 
-export default function PracticeStartClient() {
+export default function PracticeStartClient({ topic, n }: { topic: string; n: number }) {
   const router = useRouter();
-  const sp = useSearchParams();
-
-  const topic = sp.get("topic") ?? "";
-  const nParam = sp.get("n");
-  const n: number = Number.isFinite(Number(nParam)) ? Number(nParam) : 10;
 
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string | null>(null);
