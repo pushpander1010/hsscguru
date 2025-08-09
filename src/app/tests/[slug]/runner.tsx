@@ -1,3 +1,4 @@
+// src/app/tests/[slug]/runner.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,15 +51,23 @@ export default function QuizRunner({
   const [secsLeft, setSecsLeft] = useState(duration * 60);
   const [timeSpent, setTimeSpent] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const mountedRef = useRef(true);
   const autoSubmitted = useRef(false);
-  const tickRef = useRef<number | null>(null);
-  const lastTickQid = useRef<string | null>(null);
+  const intervalIdRef = useRef<number | null>(null);
 
   const current = questions[idx];
   const total = questions.length;
 
-  // Load any saved draft
+  // Guard: if no questions, show empty state
+  if (!questions || questions.length === 0) {
+    return <div className="card">No questions in this test yet.</div>;
+  }
+
+  // Load any saved draft or init timeSpent
   useEffect(() => {
+    mountedRef.current = true;
+
     const d = loadDraft(testId);
     if (d) {
       setIdx(Math.min(d.idx ?? 0, Math.max(total - 1, 0)));
@@ -67,53 +76,67 @@ export default function QuizRunner({
       setMarked(d.marked ?? {});
       setTimeSpent(d.timeSpent ?? {});
     } else {
-      // init timeSpent keys to 0
       const init: Record<string, number> = {};
       for (const q of questions) init[q.id] = 0;
       setTimeSpent(init);
     }
+
+    return () => {
+      mountedRef.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [testId]);
+  }, [testId, total]);
+
+  // If the question set changes length (rare), keep idx in range
+  useEffect(() => {
+    if (idx > total - 1) setIdx(Math.max(total - 1, 0));
+  }, [idx, total]);
 
   // Timer + per-question time tracking
   useEffect(() => {
     function onTick() {
-      setSecsLeft((s) => {
-        if (s <= 0) return 0;
-        return s - 1;
-      });
-      // increment time for current question
+      setSecsLeft((s) => (s <= 0 ? 0 : s - 1));
       const qid = questions[idx]?.id;
       if (qid) {
         setTimeSpent((t) => ({ ...t, [qid]: (t[qid] ?? 0) + 1 }));
-        lastTickQid.current = qid;
       }
     }
     const id = window.setInterval(onTick, 1000);
-    tickRef.current = id as unknown as number;
-    return () => clearInterval(id);
+    intervalIdRef.current = id as unknown as number;
+    return () => {
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
+    };
   }, [idx, questions]);
 
   // Auto-submit on timeout
   useEffect(() => {
     if (secsLeft === 0 && !autoSubmitted.current) {
       autoSubmitted.current = true;
+      // stop ticking immediately
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
       submit(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secsLeft]);
 
-  // Warn before leaving page with progress
+  // Warn before leaving page with progress (until we submit)
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
+      if (submitting) return; // don't block if we're submitting/navigating
       e.preventDefault();
-      e.returnValue = ""; // show browser prompt
+      e.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, []);
+  }, [submitting]);
 
-  // Autosave draft (throttled-ish by relying on React batching)
+  // Autosave draft
   useEffect(() => {
     const d: Draft = { v: 1, idx, secsLeft, answers, marked, timeSpent };
     try {
@@ -121,15 +144,23 @@ export default function QuizRunner({
     } catch {}
   }, [testId, idx, secsLeft, answers, marked, timeSpent]);
 
+  const answeredCount = useMemo(
+    () => Object.values(answers).filter((v) => v !== null && v !== undefined).length,
+    [answers]
+  );
+
   const mmss = useMemo(() => {
-    const m = Math.floor(secsLeft / 60)
-      .toString()
-      .padStart(2, "0");
+    const m = Math.floor(secsLeft / 60).toString().padStart(2, "0");
     const s = (secsLeft % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   }, [secsLeft]);
 
   async function ensureAuthed() {
+    // quick path: session
+    const sessionRes = await supabase.auth.getSession().catch(() => null);
+    const userFast = sessionRes?.data?.session?.user;
+    if (userFast) return true;
+
     const { data, error } = await supabase.auth.getUser();
     if (error) {
       alert(error.message);
@@ -145,29 +176,59 @@ export default function QuizRunner({
   function setChoice(qid: string, i: number) {
     setAnswers((a) => ({ ...a, [qid]: i }));
   }
-
   function clearChoice(qid: string) {
     setAnswers((a) => ({ ...a, [qid]: null }));
   }
-
   function toggleMark(qid: string) {
     setMarked((m) => ({ ...m, [qid]: !m[qid] }));
   }
-
   function jumpTo(i: number) {
     if (i >= 0 && i < total) setIdx(i);
   }
 
+  // Keyboard shortcuts: arrows for prev/next, 1-9 to select, M to mark
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (submitting) return;
+      if (e.key === "ArrowLeft") {
+        if (idx > 0) setIdx((i) => i - 1);
+      } else if (e.key === "ArrowRight") {
+        if (idx < total - 1) setIdx((i) => i + 1);
+      } else if (e.key.toLowerCase() === "m") {
+        const qid = questions[idx]?.id;
+        if (qid) toggleMark(qid);
+      } else if (/^[1-9]$/.test(e.key)) {
+        const choice = parseInt(e.key, 10) - 1;
+        const q = questions[idx];
+        if (q && q.options[choice] != null) setChoice(q.id, choice);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [idx, total, questions, submitting]);
+
   async function submit(auto = false) {
     if (submitting) return;
-    if (!(await ensureAuthed())) return;
+    setSubmitting(true);
+
+    // stop ticking immediately (avoid post-submit increments)
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+      intervalIdRef.current = null;
+    }
+
+    if (!(await ensureAuthed())) {
+      setSubmitting(false);
+      return;
+    }
 
     if (!auto) {
       const sure = window.confirm("Submit your answers now?");
-      if (!sure) return;
+      if (!sure) {
+        setSubmitting(false);
+        return;
+      }
     }
-
-    setSubmitting(true);
 
     // create attempt
     const { data: attempt, error: aErr } = await supabase
@@ -182,7 +243,7 @@ export default function QuizRunner({
       return;
     }
 
-    // prepare rows with time spent
+    // insert answers
     const rows = questions.map((q) => {
       const chosen = answers[q.id] ?? null;
       return {
@@ -190,11 +251,10 @@ export default function QuizRunner({
         question_id: q.id,
         chosen_index: chosen,
         is_correct: chosen === q.correct_index,
-        time_spent_sec: Math.max(0, Math.min(36000, timeSpent[q.id] ?? 0)), // clamp just in case
+        time_spent_sec: Math.max(0, Math.min(36000, timeSpent[q.id] ?? 0)),
       };
     });
 
-    // insert answers
     const { error: insErr } = await supabase.from("attempt_answers").insert(rows);
     if (insErr) {
       setSubmitting(false);
@@ -202,7 +262,7 @@ export default function QuizRunner({
       return;
     }
 
-    // score + finish
+    // finish attempt
     const score = rows.filter((r) => r.is_correct).length;
     const { error: upErr } = await supabase
       .from("attempts")
@@ -210,93 +270,80 @@ export default function QuizRunner({
       .eq("id", attempt.id);
     if (upErr) console.error(upErr);
 
-    // clear draft
     try {
       localStorage.removeItem(`draft:${testId}`);
     } catch {}
 
-    router.replace(`/results/${attempt.id}`);
+    if (mountedRef.current) {
+      router.replace(`/results/${attempt.id}`);
+    }
   }
 
-  if (!current) {
-    return <div className="p-6 border rounded">No questions in this test yet.</div>;
-  }
-
-  // Palette helpers
+  // Palette tile class builder
   function tileClass(q: Question, i: number) {
     const answered = answers[q.id] !== null && answers[q.id] !== undefined;
     const isCurrent = i === idx;
-    const isMarked = marked[q.id];
-    const base = "min-w-9 h-9 px-2 flex items-center justify-center rounded border text-sm";
-    if (isCurrent) return `${base} border-black font-semibold`;
-    if (isMarked && answered) return `${base} border-purple-600 bg-purple-50`;
-    if (isMarked) return `${base} border-purple-600`;
-    if (answered) return `${base} border-green-600 bg-green-50`;
-    return `${base} border-gray-300`;
+    const isMarked = !!marked[q.id];
+    return [
+      "palette-tile",
+      isCurrent && "is-current",
+      isMarked && "is-marked",
+      answered && "is-answered",
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   return (
     <div className="space-y-4">
       {/* Header bar */}
-      <div className="flex flex-wrap items-center gap-3 justify-between p-3 border rounded">
-        <div className="flex items-center gap-3">
-          <div>
-            Question {idx + 1} / {total}
-          </div>
-          <div className="text-xs opacity-70">
-            Answered:{" "}
-            {
-              Object.values(answers).filter((v) => v !== null && v !== undefined)
-                .length
-            }{" "}
-            / {total}
+      <div className="runner-bar">
+        <div className="runner-meta">
+          <div>Question {idx + 1} / {total}</div>
+          <div className="runner-counter">
+            Answered: {answeredCount} / {total}
           </div>
         </div>
-        <div aria-label="timer" className="text-lg">
-          ⏱ {mmss}
-        </div>
+        <div aria-label="timer" className="runner-timer">⏱ {mmss}</div>
       </div>
 
       {/* Palette */}
-      <div className="border rounded p-3">
-        <div className="text-sm font-medium mb-2">Question Palette</div>
-        <div className="flex flex-wrap gap-2">
+      <div className="palette">
+        <div className="palette-title">Question Palette</div>
+        <div className="palette-grid">
           {questions.map((q, i) => (
             <button
               key={q.id}
               className={tileClass(q, i)}
               onClick={() => jumpTo(i)}
-              title={
-                (marked[q.id] ? "Marked • " : "") +
-                (answers[q.id] != null ? "Answered" : "Unanswered")
-              }
+              title={`${marked[q.id] ? "Marked • " : ""}${answers[q.id] != null ? "Answered" : "Unanswered"}`}
             >
               {i + 1}
             </button>
           ))}
         </div>
-        <div className="mt-2 text-xs opacity-70 flex gap-4">
+
+        <div className="palette-legend">
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block w-3 h-3 border border-green-600 bg-green-50 rounded-sm" />{" "}
-            Answered
+            <span className="legend-dot legend-answered" /> Answered
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block w-3 h-3 border border-purple-600 rounded-sm" />{" "}
-            Marked
+            <span className="legend-dot legend-marked" /> Marked
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block w-3 h-3 border border-gray-300 rounded-sm" />{" "}
-            Unanswered
+            <span className="legend-dot legend-unanswered" /> Unanswered
           </span>
         </div>
       </div>
 
       {/* Question card */}
-      <div className="border rounded p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="font-medium">Q{idx + 1}. {current.text}</p>
+      <div className="q-card">
+        <div className="q-head">
+          <p className="q-title">
+            Q{idx + 1}. {current.text}
+          </p>
           <button
-            className={`text-sm border rounded px-2 py-1 ${marked[current.id] ? "bg-purple-600 text-white border-purple-600" : ""}`}
+            className={["q-mark-btn", marked[current.id] && "is-active"].filter(Boolean).join(" ")}
             onClick={() => toggleMark(current.id)}
           >
             {marked[current.id] ? "Unmark" : "Mark for Review"}
@@ -309,9 +356,7 @@ export default function QuizRunner({
             return (
               <label
                 key={i}
-                className={`flex items-center gap-2 border rounded p-2 cursor-pointer ${
-                  checked ? "border-black" : "border-gray-200"
-                }`}
+                className={["option", checked && "is-checked"].filter(Boolean).join(" ")}
               >
                 <input
                   type="radio"
@@ -325,39 +370,36 @@ export default function QuizRunner({
           })}
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            className="text-sm border rounded px-2 py-1"
-            onClick={() => clearChoice(current.id)}
-          >
+        <div className="q-foot">
+          <button className="q-clear" onClick={() => clearChoice(current.id)}>
             Clear choice
           </button>
-          <span className="text-xs opacity-70 ml-auto">
+          <span className="q-time">
             Time on this question: {Math.floor((timeSpent[current.id] ?? 0) / 60)}m {((timeSpent[current.id] ?? 0) % 60)}s
           </span>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex gap-2">
+      <div className="runner-controls">
         <button
           disabled={idx === 0}
           onClick={() => setIdx((i) => i - 1)}
-          className="border rounded px-4 py-2 disabled:opacity-50"
+          className="btn-prev disabled:opacity-50"
         >
           Prev
         </button>
         <button
           disabled={idx === total - 1}
           onClick={() => setIdx((i) => i + 1)}
-          className="border rounded px-4 py-2 disabled:opacity-50"
+          className="btn-next disabled:opacity-50"
         >
           Next
         </button>
         <button
           onClick={() => submit(false)}
           disabled={submitting}
-          className="ml-auto bg-black text-white rounded px-4 py-2 disabled:opacity-50"
+          className="btn-submit ml-auto disabled:opacity-50"
         >
           {submitting ? "Submitting..." : "Submit"}
         </button>

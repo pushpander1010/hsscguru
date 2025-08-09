@@ -1,91 +1,105 @@
 // src/app/results/[attemptId]/page.tsx
-import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import ResultsList from "./ResultsList";
+import Link from "next/link";
+
+type TestMini = { slug: string; name: string } | null;
+type AttemptRow = {
+  id: string;
+  test_id: string;
+  started_at: string | null;
+  finished_at: string | null;
+  score: number | null;
+  tests: TestMini | TestMini[] | null;
+};
 
 export default async function ResultPage({
   params,
 }: {
-  params: { attemptId: string };
+  params: Promise<{ attemptId: string }>;
 }) {
-  const attemptId = params.attemptId;
+  const { attemptId } = await params;
 
-  // attempt (RLS ensures only owner can read)
-  const { data: attempt } = await supabase
+  const { data: attempt, error } = await supabase
     .from("attempts")
-    .select("id, test_id, started_at, finished_at, score")
+    .select("id, test_id, started_at, finished_at, score, tests(slug, name)")
     .eq("id", attemptId)
-    .single();
+    .limit(1)
+    .maybeSingle<AttemptRow>();
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Result</h1>
+        <div className="rounded-xl2 border border-border bg-bg-card p-4 text-red-500">
+          Error loading attempt: {error.message}
+        </div>
+        <Link className="inline-flex items-center gap-2 rounded-xl2 border border-border bg-bg-card px-3 py-2 text-sm shadow-soft hover:ring-1 hover:ring-ring/30"
+              href="/dashboard">← Back to Dashboard</Link>
+      </div>
+    );
+  }
 
   if (!attempt) {
-    return <main className="p-6">Attempt not found or not yours.</main>;
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Result</h1>
+        <div className="rounded-xl2 border border-border bg-bg-card p-4">
+          No attempt found.
+        </div>
+        <Link className="inline-flex items-center gap-2 rounded-xl2 border border-border bg-bg-card px-3 py-2 text-sm shadow-soft hover:ring-1 hover:ring-ring/30"
+              href="/dashboard">← Back to Dashboard</Link>
+      </div>
+    );
   }
 
-  // test meta
-  const { data: test } = await supabase
-    .from("tests")
-    .select("slug, name")
-    .eq("id", attempt.test_id)
-    .single();
-
-  // answers
-  const { data: answers } = await supabase
-    .from("attempt_answers")
-    .select("question_id, chosen_index, is_correct")
-    .eq("attempt_id", attemptId);
-
-  const ansMap = new Map(
-    (answers ?? []).map((a: any) => [a.question_id, a])
-  );
-  const qIds = (answers ?? []).map((a: any) => a.question_id);
-
-  if (qIds.length === 0) {
-    return <main className="p-6">No answers found.</main>;
+  let testName = "Unknown Test";
+  if (Array.isArray(attempt.tests)) {
+    testName = attempt.tests[0]?.name ?? "Unknown Test";
+  } else if (attempt.tests && "name" in attempt.tests) {
+    testName = attempt.tests.name ?? "Unknown Test";
   }
-
-  // question details
-  const { data: qs } = await supabase
-    .schema("api")
-    .from("questions_public")
-    .select("id, text, options, correct_index, explanation, subject, topic, lang")
-    .in("id", qIds);
-
-  const items = (qs ?? []).map((q: any) => ({ ...q, ans: ansMap.get(q.id) }));
-  const total = items.length;
-  const score = attempt.score ?? items.filter((i: any) => i.ans?.is_correct).length;
-  const pct = Math.round((score / total) * 100);
 
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <header className="border rounded p-4 space-y-3">
-        <h1 className="text-xl font-semibold">Result</h1>
-        <div className="text-sm opacity-70">
-          Score: <b>{score}</b> / {total} ({pct}%)
-        </div>
-        <div className="flex gap-2">
-          {test?.slug && (
-            <>
-              <Link
-                href={`/tests/${test.slug}`}
-                className="inline-block border rounded px-3 py-1"
-              >
-                Retake test
-              </Link>
-              <Link
-                href={`/tests/${test.slug}?mode=incorrect&src=${attemptId}`}
-                className="inline-block border rounded px-3 py-1"
-              >
-                Weak topics drill
-              </Link>
-            </>
-          )}
-          <Link href="/tests" className="inline-block border rounded px-3 py-1">
-            Back to Tests
-          </Link>
-        </div>
-      </header>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Result</h1>
+        <Link
+          className="inline-flex items-center gap-2 rounded-xl2 border border-border bg-bg-card px-3 py-2 text-sm shadow-soft hover:ring-1 hover:ring-ring/30"
+          href="/dashboard"
+        >
+          ← Back to Dashboard
+        </Link>
+      </div>
 
-      <ResultsList items={items} />
-    </main>
+      <section className="rounded-xl2 border border-border bg-bg-card p-5 shadow-soft">
+        <div className="mb-1 text-sm font-medium text-fg-muted">Test</div>
+        <div className="text-lg font-semibold">{testName}</div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-bg-muted p-3">
+            <div className="text-xs text-fg-muted">Started</div>
+            <div className="mt-1 text-sm">
+              {attempt.started_at
+                ? new Date(attempt.started_at).toLocaleString()
+                : "N/A"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-bg-muted p-3">
+            <div className="text-xs text-fg-muted">Finished</div>
+            <div className="mt-1 text-sm">
+              {attempt.finished_at
+                ? new Date(attempt.finished_at).toLocaleString()
+                : "In progress"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-bg-muted p-3">
+            <div className="text-xs text-fg-muted">Score</div>
+            <div className="mt-1 text-sm">
+              {attempt.score !== null ? attempt.score : "N/A"}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

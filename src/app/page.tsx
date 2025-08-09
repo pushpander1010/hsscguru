@@ -1,77 +1,39 @@
 // src/app/page.tsx
-export default function HomePage() {
+import Link from "next/link";
+import { ROUTES } from "@/lib/routes";
+
+export default function Home() {
   return (
-    <main className="space-y-10">
-      {/* Hero */}
-      <section className="rounded-2xl border p-8 md:p-12 bg-gradient-to-br from-emerald-50 to-white">
-        <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-          Crack HSSC CET with confidence.
+    <section className="relative">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(75,133,255,0.25),transparent_60%)]" />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+          Crack HSSC with <span className="text-brand-400">confidence</span>
         </h1>
-        <p className="mt-3 text-lg max-w-2xl">
-          Practice topic-wise questions, take full-length mocks, and keep up
-          with Haryana updates-all in one place.
+        <p className="mt-4 text-[--ink-300] max-w-2xl">
+          Smart practice, real exam-like mocks, and focused revision notes.
         </p>
+
         <div className="mt-6 flex flex-wrap gap-3">
-          <a href="/practice" className="inline-flex items-center justify-center rounded px-4 py-2 text-white" style={{ background: "rgb(var(--brand))" }}>
-            Start Practice
-          </a>
-          <a href="/tests" className="inline-flex items-center justify-center rounded px-4 py-2 border">
-            Browse Mock Tests
-          </a>
+          <Link href={ROUTES.practice} className="btn">Take a Practice Test</Link>
+          <Link href={ROUTES.Tests} className="btn-ghost">Full Mock Tests</Link>
         </div>
-      </section>
 
-      {/* Quick links */}
-      <section className="grid md:grid-cols-3 gap-4">
-        <a className="border rounded p-4 hover:bg-gray-50" href="/dashboard">
-          <div className="font-semibold">Your Dashboard</div>
-          <p className="text-sm opacity-80 mt-1">
-            See your attempts, scores, and continue where you left off.
-          </p>
-        </a>
-        <a className="border rounded p-4 hover:bg-gray-50" href="/haryana-updates">
-          <div className="font-semibold">Haryana Updates</div>
-          <p className="text-sm opacity-80 mt-1">
-            Latest state news & notices-updated regularly.
-          </p>
-        </a>
-        <a className="border rounded p-4 hover:bg-gray-50" href="/notes">
-          <div className="font-semibold">Notes</div>
-          <p className="text-sm opacity-80 mt-1">
-            Concise theory, formulas, and revision boosters.
-          </p>
-        </a>
-      </section>
-
-      {/* Why section */}
-      <section className="rounded-2xl border p-6">
-        <h2 className="text-xl font-semibold">Why HSSC Guru?</h2>
-        <ul className="mt-3 grid md:grid-cols-3 gap-4 text-sm">
-          <li className="border rounded p-4">
-            <b>Practice by Topic.</b>
-            <div className="opacity-80 mt-1">
-              Target weak areas with random sets from chosen topics.
-            </div>
-          </li>
-          <li className="border rounded p-4">
-            <b>Mock Tests.</b>
-            <div className="opacity-80 mt-1">
-              Full-length tests with explanations and review.
-            </div>
-          </li>
-          <li className="border rounded p-4">
-            <b>Fresh Updates.</b>
-            <div className="opacity-80 mt-1">
-              Haryana news & job updates so you don't miss deadlines.
-            </div>
-          </li>
-        </ul>
-        <div className="mt-4">
-          <a href="/tests" className="inline-flex items-center justify-center rounded px-4 py-2 border">
-            See all Mocks
-          </a>
+        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link href={ROUTES.notes} className="card">
+            <h3 className="text-lg font-semibold">Notes</h3>
+            <p className="mt-2 text-[--ink-300]">Concise topic notes for quick revision.</p>
+          </Link>
+          <Link href={ROUTES.haryanaGK} className="card">
+            <h3 className="text-lg font-semibold">Haryana GK</h3>
+            <p className="mt-2 text-[--ink-300]">State-specific facts & questions.</p>
+          </Link>
+          <Link href={ROUTES.jobUpdates} className="card">
+            <h3 className="text-lg font-semibold">Job Updates</h3>
+            <p className="mt-2 text-[--ink-300]">Latest HSSC recruitment news.</p>
+          </Link>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }

@@ -1,8 +1,24 @@
+// src/app/job-updates/page.tsx
+import Link from "next/link";
+import PageShell from "@/components/PageShell";
+import { ROUTES } from "@/lib/routes";
+
 export default function JobsPage() {
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">HSSC Job Updates</h1>
-      <p className="opacity-80">We'll list current notifications, important dates, and application links here.</p>
-    </main>
+    <PageShell
+      title="HSSC Job Updates"
+      subtitle="Current notifications, important dates, and application links."
+      actions={
+        <Link className="btn-ghost" href={ROUTES.dashboard}>
+          ← Back to Dashboard
+        </Link>
+      }
+    >
+      <div className="card">
+        <p className="muted">
+          We’ll list job notifications here soon. Stay tuned for the latest HSSC recruitment alerts.
+        </p>
+      </div>
+    </PageShell>
   );
 }

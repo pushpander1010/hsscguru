@@ -1,8 +1,24 @@
+// src/app/notes/page.tsx
+import Link from "next/link";
+import PageShell from "@/components/PageShell";
+import { ROUTES } from "@/lib/routes";
+
 export default function NotesPage() {
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Notes</h1>
-      <p className="opacity-80">Coming soon: subject-wise concise notes with examples and shortcuts.</p>
-    </main>
+    <PageShell
+      title="Notes"
+      subtitle="Subject-wise concise notes with examples and shortcuts."
+      actions={
+        <Link className="btn-ghost" href={ROUTES.dashboard}>
+          ← Back to Dashboard
+        </Link>
+      }
+    >
+      <div className="card">
+        <p className="muted">
+          Coming soon: subject-wise concise notes with examples and shortcuts.
+        </p>
+      </div>
+    </PageShell>
   );
 }

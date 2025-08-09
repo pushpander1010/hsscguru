@@ -1,4 +1,8 @@
+// src/app/haryana-updates/page.tsx
 export const revalidate = 1800; // ISR: refresh every 30 mins
+
+import Link from "next/link";
+import PageShell from "@/components/PageShell";
 
 type FeedItem = {
   title: string;
@@ -83,18 +87,23 @@ export default async function HaryanaUpdatesPage() {
   });
 
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Haryana Updates</h1>
-      <p className="text-sm opacity-80">
-        Latest headlines from trusted publishers. Updated every ~30 minutes.
-      </p>
-
+    <PageShell
+      title="Haryana Updates"
+      subtitle="Latest headlines from trusted publishers. Refreshed every ~30 minutes."
+      actions={
+        <Link className="btn-ghost" href="/">
+          ← Back to Dashboard
+        </Link>
+      }
+    >
       {all.length === 0 ? (
-        <div className="border rounded p-3 text-sm">No stories right now. Try again soon.</div>
+        <div className="card">
+          <p className="muted">No stories right now. Try again soon.</p>
+        </div>
       ) : (
-        <ul className="space-y-3">
+        <div className="grid gap-3">
           {all.map((item, i) => (
-            <li key={i} className="border rounded p-3">
+            <article key={i} className="card">
               <a
                 href={item.link || "#"}
                 target="_blank"
@@ -103,17 +112,17 @@ export default async function HaryanaUpdatesPage() {
               >
                 {item.title || "(no title)"}
               </a>
-              <div className="text-xs opacity-70 mt-1">
+              <div className="text-xs muted mt-1">
                 {item.source} {item.pubDate ? `• ${fmtDate(item.pubDate)}` : ""}
               </div>
-            </li>
+            </article>
           ))}
-        </ul>
+        </div>
       )}
 
-      <div className="text-xs opacity-60 pt-2">
+      <div className="text-xs muted pt-4">
         Sources: The Tribune (Haryana), Punjab Newsline (Haryana).
       </div>
-    </main>
+    </PageShell>
   );
 }
