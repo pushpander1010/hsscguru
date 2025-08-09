@@ -1,4 +1,7 @@
 // src/app/admin/upload/page.tsx
+export const dynamic = "force-dynamic"; // avoid prerender so no service key needed at build
+// export const revalidate = 0; // (optional) also disables caching if you prefer
+
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabaseServer";
 import { uploadAction, signOut } from "./actions";
@@ -15,9 +18,7 @@ export default async function AdminUploadPage() {
       <div className="w-full max-w-xl rounded-xl border border-white/10 bg-[--surface]/80 backdrop-blur p-6 shadow-lg space-y-6">
         <header>
           <h1 className="text-2xl font-semibold">Admin Upload</h1>
-          <p className="text-sm text-white/60">
-            Upload a CSV to import questions or content.
-          </p>
+          <p className="text-sm text-white/60">Upload a CSV to import questions or content.</p>
         </header>
 
         <form action={uploadAction} className="space-y-4">
@@ -33,17 +34,13 @@ export default async function AdminUploadPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <button type="submit" className="btn-ghost">
-              Upload
-            </button>
+            <button type="submit" className="btn-ghost">Upload</button>
           </div>
         </form>
 
         <div className="pt-2 border-t border-white/10">
           <form action={signOut}>
-            <button type="submit" className="text-sm underline">
-              Sign out
-            </button>
+            <button type="submit" className="text-sm underline">Sign out</button>
           </form>
         </div>
       </div>

@@ -1,19 +1,19 @@
 // src/app/admin/upload/actions.ts
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 /** Optional: simple sign out server action */
 export async function signOut() {
+  noStore();
   const supabase = await createSupabaseServer();
   await supabase.auth.signOut();
   redirect("/admin/login");
 }
 
-/** Tiny CSV parser (no embedded commas/quotes handling) */
+/** Tiny CSV parser (basic, no quoted-commas support) */
 function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const lines = text.split(/\r?\n/).filter((ln) => ln.trim().length > 0);
   if (lines.length < 2) return { headers: [], rows: [] };
@@ -33,6 +33,8 @@ function parseCsv(text: string): { headers: string[]; rows: Record<string, strin
 
 /** Upload CSV → insert rows (adjust table/columns to your schema) */
 export async function uploadAction(formData: FormData) {
+  noStore();
+
   const supabase = await createSupabaseServer();
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   if (userErr || !userRes.user) redirect("/admin/login");
@@ -47,14 +49,12 @@ export async function uploadAction(formData: FormData) {
     return;
   }
 
-  // Example: insert into your public questions table. Change to your target table.
-  const { error: insErr } = await supabaseAdmin
-    .from("questions_public")
-    .insert(rows);
+  // ⬇️ Lazy-load admin client so the service key is NOT required at build time
+  const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
 
-  // You might surface errors via cookies/toast in a real app.
-  // For build correctness, just revalidate.
-  if (!insErr) {
-    revalidatePath("/admin/upload");
-  }
+  // Example: insert into your public questions table. Change to your target table.
+  const { error: insErr } = await supabaseAdmin.from("questions_public").insert(rows);
+
+  // Revalidate regardless of result (surface error via UI if you prefer)
+  revalidatePath("/admin/upload");
 }

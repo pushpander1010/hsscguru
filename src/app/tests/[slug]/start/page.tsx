@@ -21,7 +21,7 @@ export type QRow = {
 export default async function StartTestPage({
   params,
 }: {
-  // ⬇️ Next.js dynamic API: params is async — await it
+  // ⬇️ Next.js dynamic API: params is async - await it
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params; // ✅ required in Next 15+
