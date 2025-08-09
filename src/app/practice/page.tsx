@@ -3,87 +3,118 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import PageShell from "@/components/PageShell";
-import { ROUTES } from "@/lib/routes";
 import { supabase } from "@/lib/supabaseClient";
 
-type Topic = { topic: string };
+type TopicRow = { topic: string };
 
 export default function PracticePage() {
   const sp = useSearchParams();
   const selectedTopic = sp.get("topic") ?? "";
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const nParam = sp.get("n");
+  const n = Number.isFinite(Number(nParam)) ? Number(nParam) : 10;
 
- useEffect(() => {
-  async function loadTopics() {
-    try {
-      const { data } = await supabase
+  const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      setLoading(true);
+      setErr(null);
+
+      const { data, error } = await supabase
         .schema("api")
         .from("topics_public")
         .select("topic")
         .order("topic", { ascending: true });
 
-      setTopics(data ?? []);
-    } catch {
-      setTopics([]);
+      if (!active) return;
+
+      if (error) {
+        setErr("Failed to load topics");
+        setTopics([]);
+      } else {
+        setTopics((data as TopicRow[]) ?? []);
+      }
+      setLoading(false);
     }
-  }
 
-  loadTopics();
-}, []);
-
+    load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
-    <PageShell
-      title="Practice - Choose Topic"
-      subtitle="Pick a topic and the number of questions to begin."
-      actions={
-        <Link className="btn-ghost" href={ROUTES.dashboard}>
-          ← Back to Dashboard
-        </Link>
-      }
-    >
-      {/* Center the card and keep padding modest */}
-      <form action="/practice/start" method="get" className="card w-full max-w-lg mx-auto space-y-4">
-        <div>
-          <label className="label">Topic</label>
-          <div className="select-wrap">
+    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+      <h1 className="text-2xl font-semibold mb-6">Practice</h1>
+
+      {loading ? (
+        <div className="h-10 w-40 animate-pulse rounded bg-white/10" />
+      ) : err ? (
+        <p className="text-red-400">{err}</p>
+      ) : (
+        <div className="rounded-xl border border-white/10 p-6 bg-[--surface]/80 space-y-4">
+          <label className="block text-sm">
+            Topic
             <select
-              name="topic"
-              required
+              className="mt-1 w-full rounded-lg bg-transparent border border-white/10 p-2"
               defaultValue={selectedTopic}
-              className="select"
+              onChange={(e) => {
+                const next = new URL(window.location.href);
+                next.searchParams.set("topic", e.target.value);
+                next.searchParams.set("n", String(n));
+                window.history.replaceState({}, "", next.toString());
+              }}
             >
-              <option value="" disabled>Select a topic</option>
+              <option value="" disabled>
+                Select a topic
+              </option>
               {topics.map((t) => (
                 <option key={t.topic} value={t.topic}>
                   {t.topic}
                 </option>
               ))}
             </select>
-            <span className="select-caret">▼</span>
-          </div>
-          <p className="muted text-xs mt-1">Topics are curated from your public catalog.</p>
-        </div>
+          </label>
 
-        <div>
-          <label className="label">Number of questions</label>
-          <input
-            type="number"
-            name="n"
-            defaultValue={10}
-            min={1}
-            max={50}
-            className="input w-32"
-          />
-          <p className="muted text-xs mt-1">Between 1 and 50.</p>
-        </div>
+          <label className="block text-sm">
+            Number of Questions
+            <input
+              type="number"
+              min={1}
+              max={50}
+              defaultValue={n}
+              className="mt-1 w-full rounded-lg bg-transparent border border-white/10 p-2"
+              onChange={(e) => {
+                const next = new URL(window.location.href);
+                next.searchParams.set("topic", selectedTopic);
+                next.searchParams.set("n", e.target.value);
+                window.history.replaceState({}, "", next.toString());
+              }}
+            />
+          </label>
 
-        <div className="pt-1">
-          <button className="btn" type="submit">Start Practice</button>
+          <button
+            className="btn-ghost"
+            onClick={() => {
+              // navigate to your practice runner if needed
+              const next = new URL(window.location.href);
+              const topic = next.searchParams.get("topic");
+              const count = next.searchParams.get("n");
+              if (topic) {
+                window.location.href = `/practice/run?topic=${encodeURIComponent(
+                  topic
+                )}&n=${encodeURIComponent(count ?? "10")}`;
+              }
+            }}
+          >
+            Start Practice
+          </button>
         </div>
-      </form>
-    </PageShell>
+      )}
+    </main>
   );
 }

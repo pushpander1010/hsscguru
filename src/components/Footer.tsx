@@ -1,15 +1,16 @@
 // src/components/Footer.tsx
+import Link from "next/link";
+
 export default function Footer() {
   return (
-    <footer className="mt-10 border-t">
-      <div className="mx-auto max-w-5xl px-4 py-6 text-sm text-gray-600 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div>© {new Date().getFullYear()} HSSC Guru</div>
-        <div className="flex items-center gap-3">
-          <a className="hover:underline" href="/jobs">Jobs</a>
-          <a className="hover:underline" href="/notes">Notes</a>
-          <a className="hover:underline" href="/haryana-updates">Haryana Updates</a>
-          <a className="hover:underline" href="/tests">Mocks</a>
-        </div>
+    <footer className="border-t border-white/10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <p className="text-sm text-white/60">© {new Date().getFullYear()} HSSC Guru</p>
+        <nav className="flex items-center gap-4 text-sm">
+          <Link href="/tests/" className="hover:underline">Tests</Link>
+          <Link href="/practice" className="hover:underline">Practice</Link>
+          <Link href="/notes" className="hover:underline">Notes</Link>
+        </nav>
       </div>
     </footer>
   );

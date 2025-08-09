@@ -1,75 +1,77 @@
 // src/app/results/[attemptId]/ResultsList.tsx
 "use client";
-import { useMemo, useState } from "react";
 
-export default function ResultsList({ items }: { items: any[] }) {
-  const [page, setPage] = useState(1);
-  const perPage = 10;
-  const totalPages = Math.max(1, Math.ceil(items.length / perPage));
-  const slice = useMemo(
-    () => items.slice((page - 1) * perPage, page * perPage),
-    [items, page]
-  );
+type QAItem = {
+  id: string;
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: number;
+  chosenIndex: number | null;
+  explanation?: string | null;
+};
 
+type ResultsListProps = {
+  items: QAItem[];
+};
+
+export default function ResultsList({ items }: ResultsListProps) {
   return (
-    <section className="space-y-4">
-      {slice.map((q: any, idx: number) => {
-        const chosen = q.ans?.chosen_index ?? -1;
-        const correct = q.correct_index;
+    <ul className="space-y-4">
+      {items.map((it, idx) => {
+        const isCorrect =
+          it.chosenIndex !== null && it.chosenIndex === it.correctIndex;
 
         return (
-          <div key={q.id} className="border rounded p-4">
-            <div className="text-sm opacity-70 mb-1">
-              Q{(page - 1) * perPage + idx + 1}. {q.subject} • {q.topic} •{" "}
-              {q.lang?.toUpperCase()}
+          <li
+            key={it.id}
+            className="rounded-xl border border-white/10 p-4 bg-[--surface]/80"
+          >
+            <div className="mb-2 font-medium">
+              Q{idx + 1}. {it.question}
             </div>
-            <p className="font-medium mb-3">{q.text}</p>
-            <ol className="grid gap-2 list-decimal ml-5">
-              {q.options.map((opt: string, i: number) => {
-                const isChosen = i === chosen;
-                const isRight = i === correct;
-                const style = isRight
-                  ? "border-green-500"
-                  : isChosen
-                  ? "border-red-500"
-                  : "border-gray-200";
+
+            <ul className="grid sm:grid-cols-2 gap-2 text-sm">
+              {it.options.map((opt, i) => {
+                const isAnswer = i === it.correctIndex;
+                const isChosen = i === it.chosenIndex;
                 return (
-                  <li key={i} className={`p-2 rounded border ${style}`}>
-                    {opt}
-                    {isRight ? " ✅" : isChosen ? " ❌" : ""}
+                  <li
+                    key={i}
+                    className={[
+                      "rounded-lg border p-2",
+                      isAnswer
+                        ? "border-green-500/40 bg-green-500/10"
+                        : "border-white/10",
+                      isChosen && !isAnswer
+                        ? "outline outline-1 outline-red-500/60"
+                        : "",
+                    ].join(" ")}
+                  >
+                    {String.fromCharCode(65 + i)}. {opt}
                   </li>
                 );
               })}
-            </ol>
-            {q.explanation ? (
-              <details className="mt-2">
-                <summary className="cursor-pointer">Explanation</summary>
-                <p className="mt-1 text-sm">{q.explanation}</p>
-              </details>
+            </ul>
+
+            <div className="mt-3 text-sm">
+              Result:&nbsp;
+              {it.chosenIndex === null ? (
+                <span className="text-white/70">Not answered</span>
+              ) : isCorrect ? (
+                <span className="text-green-400">Correct</span>
+              ) : (
+                <span className="text-red-400">Incorrect</span>
+              )}
+            </div>
+
+            {it.explanation ? (
+              <div className="mt-2 text-xs text-white/70">
+                Explanation: {it.explanation}
+              </div>
             ) : null}
-          </div>
+          </li>
         );
       })}
-
-      <div className="flex items-center justify-center gap-2">
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="border rounded px-3 py-1 disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <div className="text-sm">
-          Page {page} / {totalPages}
-        </div>
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-          className="border rounded px-3 py-1 disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </section>
+    </ul>
   );
 }
