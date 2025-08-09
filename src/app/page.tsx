@@ -1,64 +1,77 @@
-// app/page.tsx
-import { supabase } from "@/lib/supabaseClient";
-
-type Question = {
-  id: string;
-  subject: string;
-  topic: string;
-  lang: "hi" | "en" | "bi";
-  text: string;
-  options: string[];
-  correct_index: number;
-  explanation: string | null;
-  difficulty: "easy" | "medium" | "hard" | null;
-  source: string | null;
-  year: number | null;
-  created_at: string;
-};
-
-export default async function Home() {
-  // Query the dedicated API schema
-  const { data, error } = await supabase
-    .schema("api")
-    .from("questions_public")
-    .select("*")
-    .limit(10);
-
-  if (error) {
-    console.error(error);
-  }
-
-  const questions = (data ?? []) as Question[];
-
+// src/app/page.tsx
+export default function HomePage() {
   return (
-    <main className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold">HSSC CET – Practice</h1>
-      {questions.length === 0 ? (
-        <p>No questions yet. Seed some in Supabase.</p>
-      ) : (
-        questions.map((q) => (
-          <section key={q.id} className="rounded-2xl border p-4 space-y-3">
-            <div className="text-sm opacity-70">
-              <span>{q.subject}</span> • <span>{q.topic}</span> •{" "}
-              <span>{q.lang.toUpperCase()}</span>
+    <main className="space-y-10">
+      {/* Hero */}
+      <section className="rounded-2xl border p-8 md:p-12 bg-gradient-to-br from-emerald-50 to-white">
+        <h1 className="text-3xl md:text-4xl font-bold leading-tight">
+          Crack HSSC CET with confidence.
+        </h1>
+        <p className="mt-3 text-lg max-w-2xl">
+          Practice topic-wise questions, take full-length mocks, and keep up
+          with Haryana updates-all in one place.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a href="/practice" className="inline-flex items-center justify-center rounded px-4 py-2 text-white" style={{ background: "rgb(var(--brand))" }}>
+            Start Practice
+          </a>
+          <a href="/tests" className="inline-flex items-center justify-center rounded px-4 py-2 border">
+            Browse Mock Tests
+          </a>
+        </div>
+      </section>
+
+      {/* Quick links */}
+      <section className="grid md:grid-cols-3 gap-4">
+        <a className="border rounded p-4 hover:bg-gray-50" href="/dashboard">
+          <div className="font-semibold">Your Dashboard</div>
+          <p className="text-sm opacity-80 mt-1">
+            See your attempts, scores, and continue where you left off.
+          </p>
+        </a>
+        <a className="border rounded p-4 hover:bg-gray-50" href="/haryana-updates">
+          <div className="font-semibold">Haryana Updates</div>
+          <p className="text-sm opacity-80 mt-1">
+            Latest state news & notices-updated regularly.
+          </p>
+        </a>
+        <a className="border rounded p-4 hover:bg-gray-50" href="/notes">
+          <div className="font-semibold">Notes</div>
+          <p className="text-sm opacity-80 mt-1">
+            Concise theory, formulas, and revision boosters.
+          </p>
+        </a>
+      </section>
+
+      {/* Why section */}
+      <section className="rounded-2xl border p-6">
+        <h2 className="text-xl font-semibold">Why HSSC Guru?</h2>
+        <ul className="mt-3 grid md:grid-cols-3 gap-4 text-sm">
+          <li className="border rounded p-4">
+            <b>Practice by Topic.</b>
+            <div className="opacity-80 mt-1">
+              Target weak areas with random sets from chosen topics.
             </div>
-            <p className="font-medium">{q.text}</p>
-            <ol className="grid gap-2 list-decimal ml-5">
-              {q.options.map((opt, i) => (
-                <li key={i} className="p-2 rounded border">
-                  {opt}
-                </li>
-              ))}
-            </ol>
-            {q.explanation ? (
-              <details className="mt-2">
-                <summary className="cursor-pointer">Show explanation</summary>
-                <p className="mt-1 text-sm">{q.explanation}</p>
-              </details>
-            ) : null}
-          </section>
-        ))
-      )}
+          </li>
+          <li className="border rounded p-4">
+            <b>Mock Tests.</b>
+            <div className="opacity-80 mt-1">
+              Full-length tests with explanations and review.
+            </div>
+          </li>
+          <li className="border rounded p-4">
+            <b>Fresh Updates.</b>
+            <div className="opacity-80 mt-1">
+              Haryana news & job updates so you don't miss deadlines.
+            </div>
+          </li>
+        </ul>
+        <div className="mt-4">
+          <a href="/tests" className="inline-flex items-center justify-center rounded px-4 py-2 border">
+            See all Mocks
+          </a>
+        </div>
+      </section>
     </main>
   );
 }
