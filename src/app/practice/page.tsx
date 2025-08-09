@@ -1,15 +1,16 @@
 // app/practice/page.tsx
-type SP = { topic?: string; n?: string };
+import { Suspense } from "react";
+import PracticeClient from "./PracticeClient";
 
-export default async function PracticePage({
-  searchParams,
-}: {
-  searchParams: Promise<SP>; // <-- important on Next 15
-}) {
-  const sp = await searchParams;      // <-- await it
-  const topic = sp?.topic ?? "";
-  const n = sp?.n ?? "";
+export const dynamic = "force-dynamic";
 
-  // ...server-rendered UI (no client hooks here)
-  return <div>Practice: {topic} | n: {n}</div>;
+export default function PracticePage() {
+  return (
+    <main className="mx-auto max-w-3xl p-6">
+      <h1 className="text-2xl font-semibold mb-4">Practice (by topic)</h1>
+      <Suspense fallback={<div>Loading…</div>}>
+        <PracticeClient />
+      </Suspense>
+    </main>
+  );
 }
