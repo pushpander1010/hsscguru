@@ -1,26 +1,26 @@
-// src/app/practice/page.tsx
+// src/app/practice/start/page.tsx
 import { Suspense } from "react";
-import PracticeClient from "./PracticeClient";
+import PracticeStartClient from "./PracticeStartClient";
 
-export const dynamic = "force-dynamic"; // avoids prerender surprises for this CSR page
+export const dynamic = "force-dynamic"; // avoid prerender issues
 
-function PracticeSkeleton() {
+function StartSkeleton() {
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-      <div className="h-7 w-48 mb-6 animate-pulse rounded bg-white/10" />
-      <div className="rounded-xl border border-white/10 p-6 bg-[--surface]/80 space-y-4">
-        <div className="h-10 w-full animate-pulse rounded bg-white/10" />
-        <div className="h-10 w-full animate-pulse rounded bg-white/10" />
-        <div className="h-10 w-32 animate-pulse rounded bg-white/10" />
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10">
+      <div className="h-7 w-56 mb-6 animate-pulse rounded bg-white/10" />
+      <div className="space-y-4">
+        <div className="rounded-xl border border-white/10 p-4 bg-[--surface]/80 h-28 animate-pulse" />
+        <div className="rounded-xl border border-white/10 p-4 bg-[--surface]/80 h-28 animate-pulse" />
+        <div className="rounded-xl border border-white/10 p-4 bg-[--surface]/80 h-28 animate-pulse" />
       </div>
     </main>
   );
 }
 
-export default function PracticePage() {
+export default function PracticeStartPage() {
   return (
-    <Suspense fallback={<PracticeSkeleton />}>
-      <PracticeClient />
+    <Suspense fallback={<StartSkeleton />}>
+      <PracticeStartClient />
     </Suspense>
   );
 }
