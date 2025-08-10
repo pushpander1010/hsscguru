@@ -15,8 +15,11 @@ export default function AdminGuard() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!active) return;
-      if (data.user) {
-        setEmail(data.user.email ?? null);
+      const userEmail = data.user?.email;
+      setEmail(userEmail ?? null);
+      
+      const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL;
+      if (userEmail === ownerEmail) {
         router.replace("/admin/upload");
       } else {
         setChecking(false);
