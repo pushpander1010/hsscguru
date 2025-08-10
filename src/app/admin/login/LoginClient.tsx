@@ -58,12 +58,7 @@ export function LoginClient() {
         {loading ? "Redirecting..." : "Continue with Google"}
       </button>
 
-      <div className="relative my-4">
-        <div className="border-t" />
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--background)] px-2 text-xs opacity-60">
-          OR
-        </span>
-      </div>
+      {/* ...removed OR separator... */}
 
       <form onSubmit={sendMagicLink} className="space-y-3">
         <input

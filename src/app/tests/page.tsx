@@ -1,76 +1,42 @@
-// src/app/tests/page.tsx
-"use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 
 type Test = { slug: string; name: string };
 
-export default function TestsPage() {
-  const [loading, setLoading] = useState(true);
-  const [tests, setTests] = useState<Test[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      setLoading(true);
-      setErr(null);
-
-      const { data: userRes } = await supabase.auth.getUser();
-      if (!active) return;
-      setUserEmail(userRes.user?.email ?? null);
-
-      const { data, error } = await supabase
-        .schema("api")
-        .from("tests_public")
-        .select("slug,name")
-        .order("name", { ascending: true });
-
-      if (!active) return;
-
-      if (error) {
-        setErr("Failed to load tests");
-      } else {
-        setTests(data ?? []);
-      }
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const visible = useMemo(() => tests.filter(Boolean), [tests]);
-
-  if (loading) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-        <div className="card p-8 text-center">
-          <div className="text-6xl mb-4">⏳</div>
-          <div className="title text-2xl mb-2">Loading Tests</div>
-          <div className="muted">Please wait while we fetch your available tests...</div>
-        </div>
-      </main>
-    );
+export default async function TestsPage() {
+  // Server-side auth check
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(ROUTES.login);
   }
 
-  if (err) {
+  // Fetch tests
+  const { data: tests, error } = await supabase
+    .schema("api")
+    .from("tests_public")
+    .select("slug,name")
+    .order("name", { ascending: true });
+
+  if (error) {
     return (
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
         <div className="card p-8 text-center">
           <div className="text-6xl mb-4">❌</div>
           <div className="title text-2xl mb-2">Error Loading Tests</div>
-          <div className="alert-error">{err}</div>
+          <div className="alert-error">Failed to load tests</div>
         </div>
       </main>
     );
   }
+
+  const visible = (tests ?? []).filter(Boolean);
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
@@ -83,7 +49,7 @@ export default function TestsPage() {
           <div>
             <h1 className="title text-4xl mb-2">Available Tests</h1>
             <p className="text-lg muted">
-              {userEmail ? `Welcome back, ${userEmail}!` : "You're browsing as guest"}
+              {user.email ? `Welcome back, ${user.email}!` : "You're browsing as guest"}
             </p>
           </div>
         </div>

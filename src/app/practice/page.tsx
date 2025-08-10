@@ -1,10 +1,22 @@
 // app/practice/page.tsx
+
 import { Suspense } from "react";
 import PracticeClient from "./PracticeClient";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 
-export const dynamic = "force-dynamic";
 
-export default function PracticePage() {
+export default async function PracticePage() {
+  // Server-side auth check (App Router compatible)
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(ROUTES.login);
+  }
   return (
     <main className="mx-auto max-w-3xl p-6">
       <div className="card bg-gradient-to-br from-brand-500/10 to-purple-600/10 border-brand-500/20 mb-8">
@@ -19,3 +31,4 @@ export default function PracticePage() {
     </main>
   );
 }
+

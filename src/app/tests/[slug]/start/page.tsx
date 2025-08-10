@@ -1,5 +1,7 @@
-// src/app/tests/[slug]/start/page.tsx
-import { createSupabaseServer } from "@/lib/supabaseServer";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 import PageShell from "@/components/PageShell";
 import QuizRunner from "./QuizRunner";
 import Link from "next/link";
@@ -53,14 +55,17 @@ function toFourOptions(o: unknown): [string, string, string, string] {
   return [four[0], four[1], four[2], four[3]];
 }
 
-export default async function StartTestPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
+export default async function StartTestPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
 
-  const supabase = await createSupabaseServer();
+  // Server-side auth check
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(ROUTES.login);
+  }
 
   // 1) Load test by slug
   const { data: testData, error: tErr } = await supabase
@@ -225,6 +230,7 @@ export default async function StartTestPage({
     );
   }
 
+  
   // 3) Hand off to client runner
   return (
     <PageShell title={test.name} subtitle="Good luck! Stay calm and manage your time.">

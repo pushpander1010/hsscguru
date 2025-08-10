@@ -1,7 +1,10 @@
 // src/app/tests/[slug]/page.tsx
 import Link from "next/link";
 import PageShell from "@/components/PageShell";
-import { supabase } from "@/lib/supabaseClient";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 
 type TestRow = {
   id: string;
@@ -13,13 +16,17 @@ type TestRow = {
 
 export const dynamic = "force-dynamic";
 
-export default async function TestDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  // ✅ Next.js 15: params is a Promise in Server Components
-  const { slug } = await params;
+export default async function TestDetailPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
+
+  // Server-side auth check
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(ROUTES.login);
+  }
 
   const { data, error } = await supabase
     .schema("api")
