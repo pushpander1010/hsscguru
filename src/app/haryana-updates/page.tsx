@@ -140,15 +140,14 @@ export default async function HaryanaUpdatesPage() {
   });
 
   return (
-    <PageShell
-      title="Haryana Updates"
-      subtitle="Latest headlines from trusted publishers. Refreshed every ~30 minutes."
-      actions={
+    <main className="mx-auto max-w-3xl p-6">
+      <div className="card bg-gradient-to-br from-brand-500/10 to-purple-600/10 border-brand-500/20 mb-8">
+        <h1 className="text-2xl font-semibold mb-2 text-brand-400">Haryana Updates</h1>
+        <p className="muted mb-4">Latest headlines from trusted publishers. Refreshed every ~30 minutes.</p>
         <Link className="btn-ghost" href="/">
           ← Back to Dashboard
         </Link>
-      }
-    >
+      </div>
       {all.length === 0 ? (
         <div className="card">
           <p className="muted">No stories right now. Try again soon.</p>
@@ -156,22 +155,22 @@ export default async function HaryanaUpdatesPage() {
       ) : (
         <div className="grid gap-3">
           {all.map((item, i) => (
-            <article key={i} className="card">
+            <article key={i} className="card bg-gradient-to-br from-purple-500/10 to-brand-500/10 border-purple-500/20">
               <div className="flex items-start gap-3">
-                {// eslint-disable-next-line @next/next/no-img-element
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.image || "/globe.svg"}
                   alt="thumbnail"
                   className="h-16 w-24 rounded object-cover border border-white/10"
                   referrerPolicy="no-referrer"
                   loading="lazy"
-                />}
+                />
                 <div className="min-w-0">
                   <a
                     href={item.link || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium hover:underline line-clamp-2"
+                    className="font-medium hover:underline line-clamp-2 text-brand-400"
                   >
                     {item.title || "(no title)"}
                   </a>
@@ -184,10 +183,9 @@ export default async function HaryanaUpdatesPage() {
           ))}
         </div>
       )}
-
       <div className="text-xs muted pt-4">
         Sources: The Tribune (Haryana), Punjab Newsline (Haryana).
       </div>
-    </PageShell>
+    </main>
   );
 }

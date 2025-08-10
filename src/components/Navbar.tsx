@@ -69,7 +69,7 @@ export default function Navbar() {
   const onLogout = async () => {
     await supabase.auth.signOut();
     setMenuOpen(false);
-    router.push(ROUTES.home);
+    router.push(ROUTES.login);
     router.refresh();
   };
 
@@ -88,21 +88,26 @@ export default function Navbar() {
 
         {/* Middle: Links */}
         <ul className="ml-6 flex flex-wrap items-center gap-2">
-          <li>
-            <Link className="btn-ghost" href={ROUTES.dashboard}>
-              Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link className="btn-ghost" href={ROUTES.practice}>
-              Practice
-            </Link>
-          </li>
-          <li>
-            <Link className="btn-ghost" href={ROUTES.Tests}>
-              Mock Tests
-            </Link>
-          </li>
+          {/* Only render protected links after loading is complete to avoid SSR/client mismatch */}
+          {!loading && user && (
+            <>
+              <li>
+                <Link className="btn-ghost" href={ROUTES.dashboard}>
+                  Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link className="btn-ghost" href={ROUTES.practice}>
+                  Practice
+                </Link>
+              </li>
+              <li>
+                <Link className="btn-ghost" href={ROUTES.Tests}>
+                  Mock Tests
+                </Link>
+              </li>
+            </>
+          )}
           <li>
             <Link className="btn-ghost" href={ROUTES.haryanaUpdates}>
               Haryana Updates

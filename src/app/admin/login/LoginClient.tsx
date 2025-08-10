@@ -23,6 +23,9 @@ export function LoginClient() {
     if (error) {
       setStatus(error.message);
       setLoading(false);
+    } else {
+      // After redirect, force reload so Navbar updates
+      window.location.href = "/admin/upload";
     }
   }
 
@@ -36,6 +39,10 @@ export function LoginClient() {
     });
     setStatus(error ? error.message : "Magic link sent! Check your email.");
     setLoading(false);
+    if (!error) {
+      // After redirect, force reload so Navbar updates
+      window.location.href = "/admin/upload";
+    }
   }
 
   return (

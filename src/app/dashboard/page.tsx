@@ -3,6 +3,7 @@ import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import { createSupabaseServer } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { ROUTES } from "@/lib/routes";
 
 type TestMini = { slug: string; name: string } | null;
 
@@ -17,6 +18,8 @@ type AttemptRow = {
 
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -28,6 +31,7 @@ export default async function DashboardPage({
   const to = typeof sp.to === "string" ? sp.to : undefined; // YYYY-MM-DD
   const supabase = await createSupabaseServer();
   const { data: userRes } = await supabase.auth.getUser();
+  const userId = userRes.user?.id ?? null;
   const userEmail = userRes.user?.email ?? null;
   const meta = (userRes.user?.user_metadata ?? {}) as Record<string, unknown>;
   const displayName =
@@ -37,24 +41,32 @@ export default async function DashboardPage({
     (userEmail ? userEmail.split("@")[0] : undefined) ||
     undefined;
 
+  // Redirect to login if not logged in
+  if (!userId) {
+    redirect(ROUTES.login ?? "/login");
+  }
+
   type QueryRunner = () => Promise<{ data: any[] | null; error: any }>;
   const attemptsQueries: QueryRunner[] = [
     async () =>
       await supabaseAdmin
         .schema("api")
         .from("attempts_public")
-        .select("id,test_id,started_at,finished_at,score,tests:tests_public(slug,name)")
+        .select("id,test_id,started_at,finished_at,score,tests:tests_public(slug,name),user_id")
+        .eq("user_id", userId)
         .order("started_at", { ascending: false }),
     async () =>
       await supabaseAdmin
         .schema("api")
         .from("attempts")
-        .select("id,test_id,started_at,finished_at,score")
+        .select("id,test_id,started_at,finished_at,score,user_id")
+        .eq("user_id", userId)
         .order("started_at", { ascending: false }),
     async () =>
       await supabaseAdmin
         .from("attempts")
-        .select("id,test_id,started_at,finished_at,score")
+        .select("id,test_id,started_at,finished_at,score,user_id")
+        .eq("user_id", userId)
         .order("started_at", { ascending: false }),
   ];
 
