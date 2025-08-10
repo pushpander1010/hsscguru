@@ -64,7 +64,7 @@ export default async function TestDetailPage({ params }: { params: { slug: strin
   );
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export function generateMetadata({ params }: { params: { slug: string } }) {
   return {
     title: `${params.slug} • Test`,
   };

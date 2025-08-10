@@ -17,11 +17,7 @@ export default function AuthForm() {
                 brand: '#3080ff', // blue-500
                 brandAccent: '#54a2ff', // blue-400
               },
-              buttonBorderRadius: '999px', // fully rounded button
             },
-          },
-          labels: {
-            providerGoogle: 'Sign in with Google (HSSC Guru)',
           },
         }}
         providers={['google']}
