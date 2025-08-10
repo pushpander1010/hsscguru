@@ -16,8 +16,12 @@ type TestRow = {
 
 export const dynamic = "force-dynamic";
 
-export default async function TestDetailPage(props: { params: Promise<{ slug: string }> }) {
-  const { slug } = await props.params;
+export default async function TestDetailPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const { slug } = params;
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
