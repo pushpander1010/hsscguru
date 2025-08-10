@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get('code');
-    const next = requestUrl.searchParams.get('next') || '/practice';
+    const returnTo = requestUrl.searchParams.get('returnTo') || '/practice';
 
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
@@ -44,10 +44,10 @@ export async function GET(request: Request) {
     }
 
     // URL to redirect to after sign in process completes
-    return NextResponse.redirect(new URL(next, requestUrl.origin));
+    return NextResponse.redirect(new URL(returnTo, requestUrl.origin));
   } catch (error) {
     console.error('Auth callback error:', error);
-    // Redirect to login page with error
+    // Redirect to login page with error message
     return NextResponse.redirect(new URL('/login?error=callback_error', request.url));
   }
 }

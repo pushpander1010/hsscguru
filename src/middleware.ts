@@ -3,49 +3,35 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  // Create a response to modify
-  const res = NextResponse.next();
-  
   try {
-    // Initialize the Supabase client with both request and response
+    // Create a new response
+    const res = NextResponse.next();
+    
+    // Create supabase client
     const supabase = createMiddlewareClient({ req, res });
 
-    // Try to get the session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    // If we have a session, refresh it
-    if (session) {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      
-      // Refresh the session
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) throw refreshError;
-    }
-
-    // Check if we're on an authentication-required route
+    // Check if we're on an auth-required route
     const isAuthRoute = req.nextUrl.pathname.match(/^\/(?:practice|tests|profile|results|dashboard)/);
     const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
 
-    // Handle admin routes
-    if (isAdminRoute) {
-      if (!session) {
-        return NextResponse.redirect(new URL('/login', req.url));
-      }
-      
-      const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL;
-      if (session.user.email !== ownerEmail) {
-        return NextResponse.redirect(new URL('/', req.url));
-      }
-      return res;
-    }
+    // Get current session (this will also refresh the session if needed)
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // Handle protected routes
-    if (isAuthRoute) {
+    // Handle routes that require authentication
+    if (isAuthRoute || isAdminRoute) {
       if (!session) {
-        return NextResponse.redirect(new URL('/login', req.url));
+        // Store the attempted URL to redirect back after login
+        const redirectUrl = new URL('/login', req.url);
+        redirectUrl.searchParams.set('returnTo', req.nextUrl.pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // Additional check for admin routes
+      if (isAdminRoute) {
+        const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL;
+        if (session.user.email !== ownerEmail) {
+          return NextResponse.redirect(new URL('/', req.url));
+        }
       }
     }
 
