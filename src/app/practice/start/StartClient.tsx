@@ -5,14 +5,45 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
-type Question = {
+type DbQuestion = {
   id: string;
   text: string;
-  options: string[] | null;
-  answer: string | null;        // store key or text (match your table)
+  options: unknown;            // raw from DB (could be array/JSON/string/null)
+  answer: string | null;
   explanation: string | null;
   topic?: string | null;
 };
+
+type Question = {
+  id: string;
+  text: string;
+  options: string[];           // normalized for UI
+  answer: string | null;
+  explanation: string | null;
+  topic?: string | null;
+};
+
+function toOptions(val: unknown): string[] {
+  if (Array.isArray(val)) {
+    // array of strings (or mixed) → strings
+    return (val as unknown[]).map((x) => String(x));
+  }
+  if (val == null) return [];
+  if (typeof val === "string") {
+    // Try JSON first
+    try {
+      const parsed = JSON.parse(val) as unknown;
+      if (Array.isArray(parsed)) return parsed.map((x) => String(x));
+    } catch {
+      /* not JSON, fall through */
+    }
+    // Fallback: split CSV/pipe
+    const parts = val.split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+    return parts;
+  }
+  // Unknown type → empty
+  return [];
+}
 
 export default function StartClient({
   topic,
@@ -34,23 +65,30 @@ export default function StartClient({
     (async () => {
       setLoading(true);
       setErr(null);
-      // Adjust table/columns to your schema
+
       const { data, error } = await supabase
         .schema("api")
         .from("questions_public")
         .select("id,text,options,answer,explanation,topic")
-        .ilike("topic", topic) // exact match? switch to .eq("topic", topic)
+        .ilike("topic", topic) // change to .eq if you need exact match
         .limit(limit);
 
       if (!mounted) return;
+
       if (error) {
         setErr(error.message);
         setQuestions([]);
       } else {
-        setQuestions((data ?? []).map(q => ({
-          ...q,
-          options: Array.isArray(q.options) ? q.options : (q.options ? (q.options as any) : []),
-        })));
+        const rows = (data ?? []) as DbQuestion[];
+        const normalized: Question[] = rows.map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: toOptions(q.options),
+          answer: q.answer,
+          explanation: q.explanation,
+          topic: q.topic ?? undefined,
+        }));
+        setQuestions(normalized);
       }
       setLoading(false);
     })();
@@ -84,7 +122,9 @@ export default function StartClient({
       <div className="flex items-center gap-2">
         <button
           className="rounded border px-3 py-1"
-          onClick={() => router.push(`/practice?topic=${encodeURIComponent(topic)}&n=${limit}`)}
+          onClick={() =>
+            router.push(`/practice?topic=${encodeURIComponent(topic)}&n=${limit}`)
+          }
         >
           ← Change selection
         </button>
@@ -114,7 +154,7 @@ export default function StartClient({
                 Q{idx + 1}. {q.text}
               </div>
               <div className="space-y-2">
-                {(q.options ?? []).map((opt, i) => {
+                {q.options.map((opt, i) => {
                   const id = `${q.id}_${i}`;
                   return (
                     <label key={id} className="flex items-center gap-2">
