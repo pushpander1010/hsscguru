@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { AuthProvider } from "@/lib/AuthProvider";
 
 export const metadata = {
   title: "HSSC Guru",
@@ -11,8 +12,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen bg-[--bg] text-[--ink-100]">
-        <Navbar />
-        <main className="pt-6">{children}</main>
+        <AuthProvider>
+          <Navbar />
+          <main className="pt-6">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
