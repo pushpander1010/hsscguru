@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
-import type { ResolvingMetadata } from 'next';
+import type { Metadata } from 'next';
 
 type TestRow = {
   id: string;
@@ -17,13 +17,13 @@ type TestRow = {
 
 export const dynamic = "force-dynamic";
 
-type Props = {
-  params: { slug: string }
-  searchParams: { [key: string]: string | string[] | undefined }
+interface PageProps {
+  params: { slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }
 
-export default async function TestDetailPage(props: Props) {
-  const { slug } = props.params;
+export default async function TestDetailPage({ params, searchParams }: PageProps) {
+  const { slug } = params;
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
@@ -71,9 +71,8 @@ export default async function TestDetailPage(props: Props) {
 }
 
 export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
-): Promise<{ title: string }> {
+  { params }: PageProps
+): Promise<Metadata> {
   return {
     title: `${params.slug} • Test`,
   };
