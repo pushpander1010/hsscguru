@@ -20,6 +20,7 @@ export default async function TestDetailPage({
   params,
 }: {
   params: { slug: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const { slug } = params;
 
