@@ -41,7 +41,7 @@ export default function Navbar() {
     loadUser();
 
     // Realtime auth changes
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user
         ? {
             email: session.user.email ?? null, // normalize to null
@@ -50,6 +50,13 @@ export default function Navbar() {
         : null;
 
       setUser(u);
+      try {
+        await fetch('/api/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event, session })
+        });
+      } catch {}
       router.refresh();
     });
 

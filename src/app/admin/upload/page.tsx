@@ -6,7 +6,15 @@ import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabaseServer";
 import { uploadAction, signOut } from "./actions";
 
-export default async function AdminUploadPage() {
+export default async function AdminUploadPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = (await (searchParams ?? Promise.resolve({}))) as Record<string, string | string[] | undefined>;
+  const success = typeof sp.success === "string" ? sp.success : undefined;
+  const count = typeof sp.count === "string" ? sp.count : undefined;
+  
   const supabase = await createSupabaseServer();
   const { data } = await supabase.auth.getUser();
   if (!data.user) {
@@ -19,6 +27,15 @@ export default async function AdminUploadPage() {
         <header>
           <h1 className="text-2xl font-semibold">Admin Upload</h1>
           <p className="text-sm text-white/60">Upload a CSV to import questions or content.</p>
+          
+          {success && (
+            <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+              <div className="text-green-400 font-medium">Upload Successful!</div>
+              <div className="text-green-300 text-sm">
+                {count} questions imported successfully.
+              </div>
+            </div>
+          )}
         </header>
 
         <form action={uploadAction} className="space-y-4">
@@ -39,9 +56,18 @@ export default async function AdminUploadPage() {
         </form>
 
         <div className="pt-2 border-t border-white/10">
-          <form action={signOut}>
-            <button type="submit" className="text-sm underline">Sign out</button>
-          </form>
+          <div className="flex items-center justify-between">
+            <a 
+              href="/sample-questions.csv" 
+              download 
+              className="text-sm text-blue-400 hover:text-blue-300 underline"
+            >
+              Download Sample CSV
+            </a>
+            <form action={signOut}>
+              <button type="submit" className="text-sm underline">Sign out</button>
+            </form>
+          </div>
         </div>
       </div>
     </main>

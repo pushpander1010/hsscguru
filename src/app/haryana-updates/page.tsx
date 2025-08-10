@@ -9,6 +9,7 @@ type FeedItem = {
   link: string;
   pubDate?: string;
   source: string;
+  image?: string | null;
 };
 
 const FEEDS = [
@@ -37,26 +38,78 @@ function items(xml: string) {
   return out;
 }
 
+// try to find a thumbnail url inside an RSS <item> snippet
+function extractImage(itemXml: string): string | null {
+  // <enclosure url="..." type="image/jpeg" />
+  let m = itemXml.match(/<enclosure[^>]*\surl=["']([^"']+)["'][^>]*>/i);
+  if (m && m[1]) return m[1];
+  // <media:content url="..." .../>, <media:thumbnail url="..."/>
+  m = itemXml.match(/<media:(?:content|thumbnail)[^>]*\surl=["']([^"']+)["'][^>]*>/i);
+  if (m && m[1]) return m[1];
+  // <img src="..."> inside <description> or <content:encoded>
+  const blob =
+    pick(itemXml, "description") ||
+    pick(itemXml, "content:encoded") ||
+    "";
+  m = blob.match(/<img[^>]*\ssrc=["']([^"']+)["'][^>]*>/i);
+  if (m && m[1]) return m[1];
+  return null;
+}
+
+async function fetchOgImage(link: string): Promise<string | null> {
+  if (!link) return null;
+  try {
+    const res = await fetch(link, {
+      // cache OG lookups for a day to reduce load
+      next: { revalidate: 86400 },
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // og:image
+    let m = html.match(/<meta[^>]+property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (m && m[1]) return m[1];
+    m = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:image["'][^>]*>/i);
+    if (m && m[1]) return m[1];
+    // twitter image
+    m = html.match(/<meta[^>]+name=["']twitter:image["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    if (m && m[1]) return m[1];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchFeed(url: string, source: string): Promise<FeedItem[]> {
   const res = await fetch(url, { next: { revalidate: 1800 } });
   if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
   const xml = await res.text();
 
-  return items(xml).map((it) => {
-    // prefer <title>, <link>, <pubDate>, fallback to DC/date tags
-    const title = (pick(it, "title") || "").replace(/<!\[CDATA\[|\]\]>/g, "").trim();
-    const link =
-      (pick(it, "link") ||
-        pick(it, "guid") ||
-        "").replace(/<!\[CDATA\[|\]\]>/g, "").trim();
-    const pubDate =
-      pick(it, "pubDate") ||
-      pick(it, "updated") ||
-      pick(it, "dc:date") ||
-      undefined;
-
-    return { title, link, pubDate, source };
-  });
+  const nodes = items(xml);
+  const mapped = await Promise.all(
+    nodes.map(async (it) => {
+      // prefer <title>, <link>, <pubDate>, fallback to DC/date tags
+      const title = (pick(it, "title") || "").replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+      const link =
+        (pick(it, "link") ||
+          pick(it, "guid") ||
+          "").replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+      const pubDate =
+        pick(it, "pubDate") ||
+        pick(it, "updated") ||
+        pick(it, "dc:date") ||
+        undefined;
+      let image = extractImage(it);
+      if (!image) {
+        image = await fetchOgImage(link);
+      }
+      return { title, link, pubDate, source, image } as FeedItem;
+    })
+  );
+  return mapped;
 }
 
 function fmtDate(d?: string) {
@@ -104,16 +157,28 @@ export default async function HaryanaUpdatesPage() {
         <div className="grid gap-3">
           {all.map((item, i) => (
             <article key={i} className="card">
-              <a
-                href={item.link || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium hover:underline"
-              >
-                {item.title || "(no title)"}
-              </a>
-              <div className="text-xs muted mt-1">
-                {item.source} {item.pubDate ? `• ${fmtDate(item.pubDate)}` : ""}
+              <div className="flex items-start gap-3">
+                {// eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.image || "/globe.svg"}
+                  alt="thumbnail"
+                  className="h-16 w-24 rounded object-cover border border-white/10"
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />}
+                <div className="min-w-0">
+                  <a
+                    href={item.link || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium hover:underline line-clamp-2"
+                  >
+                    {item.title || "(no title)"}
+                  </a>
+                  <div className="text-xs muted mt-1">
+                    {item.source} {item.pubDate ? `• ${fmtDate(item.pubDate)}` : ""}
+                  </div>
+                </div>
               </div>
             </article>
           ))}

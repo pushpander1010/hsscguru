@@ -11,7 +11,7 @@ export default function AuthForm() {
         view="magic_link"                       // <- forces Magic Link/OTP
         appearance={{ theme: ThemeSupa }}
         providers={['google']}                  // remove if not enabling Google yet
-        redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
+        redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/api/auth/callback` : undefined}
       />
     </div>
   );

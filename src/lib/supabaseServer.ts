@@ -11,9 +11,15 @@ export async function createSupabaseServer() {
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set({ name, value, ...options });
-          });
+          // Only set cookies if we're in a context where it's allowed
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set({ name, value, ...options });
+            });
+          } catch {
+            // Silently ignore cookie setting errors in Server Components
+            // Cookies will be set properly in Server Actions and Route Handlers
+          }
         },
       },
     }
