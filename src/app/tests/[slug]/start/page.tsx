@@ -55,7 +55,12 @@ function toFourOptions(o: unknown): [string, string, string, string] {
   return [four[0], four[1], four[2], four[3]];
 }
 
-export default async function StartTestPage({ params }: { params: { slug: string } }) {
+export default async function StartTestPage({
+  params,
+}: {
+  params: { slug: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const { slug } = params;
 
   // Server-side auth check
