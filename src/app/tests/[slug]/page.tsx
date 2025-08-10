@@ -17,15 +17,13 @@ type TestRow = {
 
 export const dynamic = "force-dynamic";
 
-type PageParams = {
-  params: {
-    slug: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
+interface PageProps {
+  params: Promise<{ slug: string }>;
 }
 
-export default async function TestDetailPage({ params }: PageParams) {
-  const { slug } = params;
+export default async function TestDetailPage(props: PageProps) {
+  const resolvedParams = await props.params;
+  const { slug } = resolvedParams;
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
@@ -72,8 +70,9 @@ export default async function TestDetailPage({ params }: PageParams) {
   );
 }
 
-export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const resolvedParams = await props.params;
   return {
-    title: `${params.slug} • Test`,
+    title: `${resolvedParams.slug} • Test`,
   };
 }
