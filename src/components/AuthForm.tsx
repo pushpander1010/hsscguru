@@ -21,7 +21,7 @@ export default function AuthForm() {
           },
         }}
         providers={['google']}
-        redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/api/auth/callback` : undefined}
+        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback?next=/practice`}
       />
     </div>
   );
