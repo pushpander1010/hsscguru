@@ -1,9 +1,14 @@
 'use client';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { supabase } from '@/lib/supabaseClient';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSearchParams } from 'next/navigation';
 
 export default function AuthForm() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/practice';
+  const supabase = createClientComponentClient();
+
   return (
     <div className="max-w-md mx-auto p-4">
       <Auth
@@ -14,14 +19,15 @@ export default function AuthForm() {
           variables: {
             default: {
               colors: {
-                brand: '#3080ff', // blue-500
-                brandAccent: '#54a2ff', // blue-400
+                brand: '#3080ff',
+                brandAccent: '#54a2ff',
               },
             },
           },
         }}
         providers={['google']}
-        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback?next=/practice`}
+        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback?returnTo=${returnTo}`}
+        onlyThirdPartyProviders
       />
     </div>
   );
