@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
 
 type TestRow = {
   id: string;
@@ -18,18 +18,20 @@ type TestRow = {
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  // 👇 params/searchParams are Promises in the latest Next.js
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function TestDetailPage({ params }: PageProps) {
-  const { slug } = params;
+  const { slug } = await params; // ✅ await it
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) {
     redirect(ROUTES.login);
   }
@@ -46,7 +48,9 @@ export default async function TestDetailPage({ params }: PageProps) {
       <PageShell title="Test" subtitle="We couldn't find that test">
         <div className="card">
           <p className="muted">Please go back and pick another test.</p>
-          <Link href="/tests" className="btn mt-4">← Back to tests</Link>
+          <Link href="/tests" className="btn mt-4">
+            ← Back to tests
+          </Link>
         </div>
       </PageShell>
     );
@@ -60,7 +64,9 @@ export default async function TestDetailPage({ params }: PageProps) {
       <div className="card space-y-4">
         {test.description ? <p>{test.description}</p> : null}
         <div className="flex items-center gap-3">
-          <Link href="/tests" className="btn btn-secondary">← Back</Link>
+          <Link href="/tests" className="btn btn-secondary">
+            ← Back
+          </Link>
           <Link href={`/tests/${test.slug}/start`} className="btn">
             Start Test
           </Link>
@@ -71,7 +77,6 @@ export default async function TestDetailPage({ params }: PageProps) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  return {
-    title: `${params.slug} • Test`,
-  };
+  const { slug } = await params; // ✅ await here too
+  return { title: `${slug} • Test` };
 }
