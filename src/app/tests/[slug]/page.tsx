@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import type { ResolvingMetadata } from 'next';
 
 type TestRow = {
   id: string;
@@ -16,13 +17,13 @@ type TestRow = {
 
 export const dynamic = "force-dynamic";
 
-export default async function TestDetailPage({
-  params,
-}: {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
-  const { slug } = params;
+type Props = {
+  params: { slug: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default async function TestDetailPage(props: Props) {
+  const { slug } = props.params;
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
@@ -69,7 +70,10 @@ export default async function TestDetailPage({
   );
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<{ title: string }> {
   return {
     title: `${params.slug} • Test`,
   };
