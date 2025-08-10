@@ -55,13 +55,15 @@ function toFourOptions(o: unknown): [string, string, string, string] {
   return [four[0], four[1], four[2], four[3]];
 }
 
+// ✅ CHANGED: params/searchParams are Promises
 export default async function StartTestPage({
   params,
 }: {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { slug } = params;
+  // ✅ CHANGED: await params
+  const { slug } = await params;
 
   // Server-side auth check
   const supabase = createServerComponentClient({ cookies });
@@ -101,7 +103,6 @@ export default async function StartTestPage({
   }
 
   // 2) Preferred: load questions via mapping table api.test_questions_public
-  //    This follows your SQL that counts via tq.question_id per test_id
   type MapRow = { question_id: string };
   let qData: any[] | null = null;
   let lastErr: any = null;
@@ -128,7 +129,6 @@ export default async function StartTestPage({
       if (error) {
         lastErr = error;
       } else {
-        // Preserve the order from the mapping table if possible
         const positionById = new Map<string, number>();
         ids.forEach((id, idx) => positionById.set(String(id), idx));
         qData = (data ?? []).slice().sort((a: any, b: any) => {
@@ -140,12 +140,10 @@ export default async function StartTestPage({
     }
   }
 
-  // 3) Fallbacks if mapping table returned nothing
-  //    We avoid selecting non-existent columns by using select("*") and filtering client-side later.
+  // 3) Fallbacks
   const relaxed = slug.replace(/-/g, " ");
   type QueryRunner = () => Promise<{ data: any[] | null; error: any }>;
   const attempts: QueryRunner[] = [
-    // A) by test_slug
     async () =>
       await supabase
         .schema("api")
@@ -153,7 +151,6 @@ export default async function StartTestPage({
         .select("*")
         .eq("test_slug", slug)
         .order("id", { ascending: true }),
-    // B) by topic exact
     async () =>
       await supabase
         .schema("api")
@@ -161,7 +158,6 @@ export default async function StartTestPage({
         .select("*")
         .eq("topic", slug)
         .order("id", { ascending: true }),
-    // C) by topic fuzzy
     async () =>
       await supabase
         .schema("api")
@@ -204,7 +200,6 @@ export default async function StartTestPage({
     const opts = toFourOptions(r.options);
     let computedAnswerIndex =
       r.answer_index != null ? Number(r.answer_index) : 0;
-    // Some datasets store the correct answer as a string instead of index
     if ((r as any).answer_index == null && (r as any).answer != null) {
       const idx = opts.findIndex((o) => o === r.answer);
       computedAnswerIndex = idx >= 0 ? idx : 0;
@@ -235,8 +230,6 @@ export default async function StartTestPage({
     );
   }
 
-  
-  // 3) Hand off to client runner
   return (
     <PageShell title={test.name} subtitle="Good luck! Stay calm and manage your time.">
       <div className="card">
