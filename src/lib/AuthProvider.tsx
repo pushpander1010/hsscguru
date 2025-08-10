@@ -23,23 +23,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL);
-      setLoading(false);
-    });
+    // Get initial session and set up auth state listener
+    const initializeAuth = async () => {
+      try {
+        // Get current session
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        setIsAdmin(session?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL);
 
-    // Listen for changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL);
-      setLoading(false);
-    });
+        // Set up auth state listener
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+          // Refresh the session if needed
+          if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+            setIsAdmin(user?.email === process.env.NEXT_PUBLIC_OWNER_EMAIL);
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setIsAdmin(false);
+          }
+        });
 
-    return () => subscription.unsubscribe();
+        setLoading(false);
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, [supabase]);
 
   return (

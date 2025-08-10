@@ -10,6 +10,11 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  if (session) {
+    // If session exists, refresh it to ensure it's still valid
+    await supabase.auth.getUser();
+  }
+
   // Check if we're on an authentication-required route
   const isAuthRoute = req.nextUrl.pathname.match(/^\/(?:practice|tests|profile|results|dashboard)/);
   const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
