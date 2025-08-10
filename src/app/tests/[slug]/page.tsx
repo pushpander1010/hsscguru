@@ -64,13 +64,8 @@ export default async function TestDetailPage({ params }: { params: { slug: strin
   );
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   return {
-    title: `${slug} • Test`,
+    title: `${params.slug} • Test`,
   };
 }
